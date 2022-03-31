@@ -290,6 +290,7 @@ class Cbn extends AdminController
             $base_currency   = base_currency_get();
             $total_amount = 0;
             $client_amount_details = [];
+            $client_td_details = [];
             foreach ($result as $res) {
                 if (!empty($res[2])) {
                     $total_amount = $total_amount + (preg_replace("/[^0-9.]/", "", $res[2]));
@@ -305,9 +306,14 @@ class Cbn extends AdminController
                     if (array_key_exists($res[0], $client_amount_details)) {
                         $statement_balance['total'] = $client_amount_details[$res[0]];
                         $duplicate_account = "1";
-                    } else {
+                    }else {
                         $statement_balance['total'] = $statement_balance_total['total'] - $invoicepayment_record_amount;
                         $duplicate_account = "0";
+                    }
+                    if(in_array($res[4], $client_td_details)){
+                        $duplicate_td = "1";
+                    }else{
+                        $duplicate_td = "0";
                     }
 
                     $client_data = get_client_data($res[0]);
@@ -315,17 +321,26 @@ class Cbn extends AdminController
                     $post_upload = ($statement_balance['total'] - (preg_replace("/[^0-9.]/", "", $res[2])));
                     $post_upload_balance = ($post_upload < 0) ? '(' . abs($post_upload) . ')' : abs($post_upload);
                     $client_amount_details[$res[0]] = $post_upload_balance;
+                    if(!in_array($res[4], $client_td_details)){
+                        array_push($client_td_details, $res[4]);
+                    }
 
                     $check_duplicate_record = check_duplicate_record($res[0], $res[1], $res[2], $res[4]);
 
                     if (empty($statement_record)) {
                         $check = 'style="color:red;"';
                         $account_error = "1";
-                        $account_status = "Error";
-                    } elseif ($check_duplicate_record['status'] == "1" || $duplicate_account == "1") {
+                        $account_status = "Account Error";
+                    } elseif ($check_duplicate_record['status'] == "1" || $duplicate_account == "1" || $duplicate_td == "1") {
                         $check = 'style="color:#ff6a00;"';
                         $duplicate_record = "1";
-                        $account_status = ($client_data->active == 1) ? "Active" : "Inactive";
+                        if($duplicate_account == "1"){
+                            $account_status = "Duplicate Account";
+                        }else if($duplicate_td == "1"){
+                            $account_status = "Duplicate TD";
+                        }else{
+                            $account_status = $check_duplicate_record['message'];
+                        }
                     } else {
                         $check = "";
                         $account_status = ($client_data->active == 1) ? "Active" : "Inactive";
@@ -357,6 +372,10 @@ class Cbn extends AdminController
             }
             $table .= '</tbody>';
             $table .= '</table>';
+
+            // echo "<pre>";
+            // print_r($client_td_details);
+            // die("++++++");
 
             if ($account_error == "1") {
                 $msg = _l('correct_error');
@@ -442,7 +461,7 @@ class Cbn extends AdminController
 
                 if (empty($statement_record)) {
                     $check = 'style="color:red;"';
-                    $account_status = "Error";
+                    $account_status = "Account Error";
                 } else {
                     $check = "";
                     $account_status = ($client_data->active == 1) ? "Active" : "Inactive";

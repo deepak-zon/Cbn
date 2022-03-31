@@ -305,10 +305,10 @@ function check_duplicate_record($account_number, $date, $amount, $tranjection_id
     if (!empty($query1) || !empty($query2)) {
         if (!empty($query1)) {
             $data['status']  = "1";
-            $data['message'] = "1";
+            $data['message'] = "date or amount Duplicate";
         } else {
             $data['status']  = "1";
-            $data['message'] = "2";
+            $data['message'] = "TD exist in DB";
         }
     } else {
         $data['status'] = "0";
